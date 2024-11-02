@@ -12,6 +12,8 @@
 #include "D3DDeviceContext.h"
 #include "SwapChain.h"
 #include "Window.h"
+#include "VertexBuffer.h"
+#include <DirectXMath.h>
 
 
 
@@ -26,7 +28,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpC
     // Create Swap Chain
     SwapChain swapChain{ win.hwnd, deviceContext.getD3D11Device(), deviceContext.getD3D11DeviceContext(), 0, 0 };
 
-	// Define Input Layout
+    // Define Input Layout
     std::array inputElementDesc =
     {
         D3D11_INPUT_ELEMENT_DESC{ "POS", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
@@ -38,30 +40,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpC
     PixelShader pixelShader{ deviceContext.getD3D11Device() };
 
     // Create Vertex Buffer
-    ID3D11Buffer* vertexBuffer;
-    UINT numVerts;
-    UINT stride;
-    UINT offset;
+
+    struct Vertex
     {
-        float vertexData[] = { // x, y, r, g, b, a
-            0.0f,  0.5f, 0.f, 1.f, 0.f, 1.f,
-            0.5f, -0.5f, 1.f, 0.f, 0.f, 1.f,
-            -0.5f, -0.5f, 0.f, 0.f, 1.f, 1.f
-        };
-        stride = 6 * sizeof(float);
-        numVerts = sizeof(vertexData) / stride;
-        offset = 0;
+        DirectX::XMFLOAT2 pos;
+        DirectX::XMFLOAT4 col;
+    };
 
-        D3D11_BUFFER_DESC vertexBufferDesc = {};
-        vertexBufferDesc.ByteWidth = sizeof(vertexData);
-        vertexBufferDesc.Usage = D3D11_USAGE_IMMUTABLE;
-        vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+    std::array vertexData = { // x, y, r, g, b, a
+        Vertex {.pos{  0.0f,  0.5f}, .col{ 0.f, 1.f, 0.f, 1.f }},
+        Vertex {.pos{  0.5f, -0.5f}, .col{ 1.f, 0.f, 0.f, 1.f }},
+        Vertex {.pos{ -0.5f, -0.5f}, .col{ 0.f, 0.f, 1.f, 1.f }}
+    };
 
-        D3D11_SUBRESOURCE_DATA vertexSubresourceData = { vertexData };
-
-        HRESULT hResult = deviceContext.getD3D11Device()->CreateBuffer(&vertexBufferDesc, &vertexSubresourceData, &vertexBuffer);
-        assert(SUCCEEDED(hResult));
-    }
+    VertexBuffer vertexBuffer(deviceContext.getD3D11Device(), std::span<Vertex>(vertexData));
 
     // Main Loop
     bool isRunning = true;
@@ -99,9 +91,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpC
         deviceContext.getD3D11DeviceContext()->VSSetShader(vertexShader.getVertexShader(), nullptr, 0);
         deviceContext.getD3D11DeviceContext()->PSSetShader(pixelShader.getPixelShader(), nullptr, 0);
 
-        deviceContext.getD3D11DeviceContext()->IASetVertexBuffers(0, 1, &vertexBuffer, &stride, &offset);
+        ID3D11Buffer* vertexBufferData{ vertexBuffer.getVertexBuffer() };
+        deviceContext.getD3D11DeviceContext()->IASetVertexBuffers(0, 1, &vertexBufferData, &vertexBuffer.stride, &vertexBuffer.offset);
 
-        deviceContext.getD3D11DeviceContext()->Draw(numVerts, 0);
+        deviceContext.getD3D11DeviceContext()->Draw(vertexBuffer.numVerts, 0);
 
         swapChain.present();
     }

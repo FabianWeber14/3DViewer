@@ -132,10 +132,12 @@
     <ClInclude Include="3DViewerDirect3D.h" />
     <ClInclude Include="D3DDeviceContext.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="MeshImporter.h" />
     <ClInclude Include="PixelShader.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="SwapChain.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="VertexBuffer.h" />
     <ClInclude Include="VertexShader.h" />
     <ClInclude Include="VS_Output.h" />
     <ClInclude Include="Window.h" />
@@ -143,8 +145,10 @@
   <ItemGroup>
     <ClCompile Include="3DViewerDirect3D.cpp" />
     <ClCompile Include="D3DDeviceContext.cpp" />
+    <ClCompile Include="MeshImporter.cpp" />
     <ClCompile Include="PixelShader.cpp" />
     <ClCompile Include="SwapChain.cpp" />
+    <ClCompile Include="VertexBuffer.cpp" />
     <ClCompile Include="VertexShader.cpp" />
     <ClCompile Include="Window.cpp" />
   </ItemGroup>
