@@ -2,8 +2,7 @@
 
 struct VS_Input
 {
-    float2 pos : POS;
-    float4 color : COL;
+    //TODO
 };
 
 
@@ -11,8 +10,7 @@ struct VS_Input
 VS_Output main(VS_Input input)
 {
     VS_Output output;
-    output.position = float4(input.pos, 0.0f, 1.0f);
-    output.color = input.color;
-
+    output.position = float4(0.0f, 0.0f, 0.0f, 1.0f);   //TODO
+    output.color = float4(1.0f, 0.0f, 0.0f, 1.0f);      //TODO
     return output;
 }

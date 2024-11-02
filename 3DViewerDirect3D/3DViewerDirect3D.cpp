@@ -31,8 +31,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpC
     // Define Input Layout
     std::array inputElementDesc =
     {
-        D3D11_INPUT_ELEMENT_DESC{ "POS", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        D3D11_INPUT_ELEMENT_DESC{ "COL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+            D3D11_INPUT_ELEMENT_DESC{ /*TODO*/ },
+            D3D11_INPUT_ELEMENT_DESC{ /*TODO*/ }
     };
 
     // Create Shader
@@ -43,14 +43,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpC
 
     struct Vertex
     {
-        DirectX::XMFLOAT2 pos;
-        DirectX::XMFLOAT4 col;
+        //TODO
     };
 
-    std::array vertexData = { // x, y, r, g, b, a
-        Vertex {.pos{  0.0f,  0.5f}, .col{ 0.f, 1.f, 0.f, 1.f }},
-        Vertex {.pos{  0.5f, -0.5f}, .col{ 1.f, 0.f, 0.f, 1.f }},
-        Vertex {.pos{ -0.5f, -0.5f}, .col{ 0.f, 0.f, 1.f, 1.f }}
+    std::array<Vertex,3> vertexData = {
+        //TODO
     };
 
     VertexBuffer vertexBuffer(deviceContext.getD3D11Device(), std::span<Vertex>(vertexData));
