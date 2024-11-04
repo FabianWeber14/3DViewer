@@ -1,180 +1,100 @@
-// 3DViewerDirect3D.cpp : Defines the entry point for the application.
-//
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#include <d3d11_1.h>
+#pragma comment(lib, "d3d11.lib")
+#include <d3dcompiler.h>
+#pragma comment(lib, "d3dcompiler.lib")
 
-#include "framework.h"
-#include "3DViewerDirect3D.h"
+#include <assert.h>
+#include "VertexShader.h"
+#include "PixelShader.h"
+#include "D3DDeviceContext.h"
+#include "SwapChain.h"
+#include "Window.h"
+#include "VertexBuffer.h"
+#include <DirectXMath.h>
 
-#define MAX_LOADSTRING 100
 
-// Global Variables:
-HINSTANCE hInst;                                // current instance
-WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
-WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
 
-// Forward declarations of functions included in this code module:
-ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
-LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpCmdLine*/, int /*nShowCmd*/)
 {
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
 
-    // TODO: Place code here.
+    Window win{ hInstance };
 
-    // Initialize global strings
-    LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_MY3DVIEWERDIRECT3D, szWindowClass, MAX_LOADSTRING);
-    MyRegisterClass(hInstance);
+    D3DDeviceContext deviceContext;
 
-    // Perform application initialization:
-    if (!InitInstance (hInstance, nCmdShow))
+    // Create Swap Chain
+    SwapChain swapChain{ win.hwnd, deviceContext.getD3D11Device(), deviceContext.getD3D11DeviceContext() };
+
+    // Define Input Layout
+    std::array inputElementDesc =
     {
-        return FALSE;
-    }
+            D3D11_INPUT_ELEMENT_DESC{ /*TODO*/ },
+            D3D11_INPUT_ELEMENT_DESC{ /*TODO*/ }
+    };
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_MY3DVIEWERDIRECT3D));
+    // Create Shader
+    VertexShader vertexShader{ deviceContext.getD3D11Device(),inputElementDesc };
+    PixelShader pixelShader{ deviceContext.getD3D11Device() };
 
-    MSG msg;
+    // Create Vertex Buffer
 
-    // Main message loop:
-    while (GetMessage(&msg, nullptr, 0, 0))
+    struct Vertex
     {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
+        //TODO
+    };
+
+    std::array<Vertex,3> vertexData = {
+        //TODO
+    };
+
+    VertexBuffer vertexBuffer(deviceContext.getD3D11Device(), std::span<Vertex>(vertexData));
+
+    // Main Loop
+    bool isRunning = true;
+    while (isRunning)
+    {
+        MSG msg = {};
+        while (PeekMessageW(&msg, 0, 0, 0, PM_REMOVE))
         {
+            if (msg.message == WM_QUIT)
+                isRunning = false;
             TranslateMessage(&msg);
-            DispatchMessage(&msg);
+            DispatchMessageW(&msg);
         }
+
+        if (win.needResize())
+        {
+            swapChain.resize(deviceContext.getD3D11Device(), deviceContext.getD3D11DeviceContext());
+            win.resetNeedResize();
+        }
+
+        FLOAT backgroundColor[4] = { 0.1f, 0.2f, 0.6f, 1.0f };
+        swapChain.clearRenderTarget(deviceContext.getD3D11DeviceContext(), backgroundColor);
+
+        RECT winRect;
+        GetClientRect(win.hwnd, &winRect);
+        D3D11_VIEWPORT viewport = { 0.0f, 0.0f, (FLOAT)(winRect.right - winRect.left), (FLOAT)(winRect.bottom - winRect.top), 0.0f, 1.0f };
+        deviceContext.getD3D11DeviceContext()->RSSetViewports(1, &viewport);
+
+        auto* frameBuffer{ swapChain.getFrameBuffer() };
+        deviceContext.getD3D11DeviceContext()->OMSetRenderTargets(1, &frameBuffer, nullptr);
+
+        deviceContext.getD3D11DeviceContext()->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        deviceContext.getD3D11DeviceContext()->IASetInputLayout(vertexShader.getInputLayout());
+
+        deviceContext.getD3D11DeviceContext()->VSSetShader(vertexShader.getVertexShader(), nullptr, 0);
+        deviceContext.getD3D11DeviceContext()->PSSetShader(pixelShader.getPixelShader(), nullptr, 0);
+
+        ID3D11Buffer* vertexBufferData{ vertexBuffer.getVertexBuffer() };
+        deviceContext.getD3D11DeviceContext()->IASetVertexBuffers(0, 1, &vertexBufferData, &vertexBuffer.stride, &vertexBuffer.offset);
+
+        deviceContext.getD3D11DeviceContext()->Draw(vertexBuffer.numVerts, 0);
+
+        swapChain.present();
     }
 
-    return (int) msg.wParam;
-}
-
-
-
-//
-//  FUNCTION: MyRegisterClass()
-//
-//  PURPOSE: Registers the window class.
-//
-ATOM MyRegisterClass(HINSTANCE hInstance)
-{
-    WNDCLASSEXW wcex;
-
-    wcex.cbSize = sizeof(WNDCLASSEX);
-
-    wcex.style          = CS_HREDRAW | CS_VREDRAW;
-    wcex.lpfnWndProc    = WndProc;
-    wcex.cbClsExtra     = 0;
-    wcex.cbWndExtra     = 0;
-    wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MY3DVIEWERDIRECT3D));
-    wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
-    wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_MY3DVIEWERDIRECT3D);
-    wcex.lpszClassName  = szWindowClass;
-    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
-
-    return RegisterClassExW(&wcex);
-}
-
-//
-//   FUNCTION: InitInstance(HINSTANCE, int)
-//
-//   PURPOSE: Saves instance handle and creates main window
-//
-//   COMMENTS:
-//
-//        In this function, we save the instance handle in a global variable and
-//        create and display the main program window.
-//
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
-{
-   hInst = hInstance; // Store instance handle in our global variable
-
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
-
-   if (!hWnd)
-   {
-      return FALSE;
-   }
-
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
-
-   return TRUE;
-}
-
-//
-//  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  PURPOSE: Processes messages for the main window.
-//
-//  WM_COMMAND  - process the application menu
-//  WM_PAINT    - Paint the main window
-//  WM_DESTROY  - post a quit message and return
-//
-//
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    switch (message)
-    {
-    case WM_COMMAND:
-        {
-            int wmId = LOWORD(wParam);
-            // Parse the menu selections:
-            switch (wmId)
-            {
-            case IDM_ABOUT:
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-                break;
-            case IDM_EXIT:
-                DestroyWindow(hWnd);
-                break;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
-            }
-        }
-        break;
-    case WM_PAINT:
-        {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
-            // TODO: Add any drawing code that uses hdc here...
-            EndPaint(hWnd, &ps);
-        }
-        break;
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        break;
-    default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
-    }
     return 0;
-}
-
-// Message handler for about box.
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    UNREFERENCED_PARAMETER(lParam);
-    switch (message)
-    {
-    case WM_INITDIALOG:
-        return (INT_PTR)TRUE;
-
-    case WM_COMMAND:
-        if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-        {
-            EndDialog(hDlg, LOWORD(wParam));
-            return (INT_PTR)TRUE;
-        }
-        break;
-    }
-    return (INT_PTR)FALSE;
 }
