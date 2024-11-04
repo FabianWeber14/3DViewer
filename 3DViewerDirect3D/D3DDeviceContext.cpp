@@ -48,6 +48,4 @@ D3DDeviceContext::D3DDeviceContext()
     }
 #endif
 
-
-
 }
