@@ -44,11 +44,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpC
 
     auto cube = MeshImporter::getCube();
 
-    std::array vertexData = { // x, y, r, g, b, a
-        Vertex {.pos{  0.0f,  0.5f, 1.f}, .col{ 0.f, 1.f, 0.f, 1.f }},
-        Vertex {.pos{  0.5f, -0.5f,1.f}, .col{ 1.f, 0.f, 0.f, 1.f }},
-        Vertex {.pos{ -0.5f, -0.5f,1.f}, .col{ 0.f, 0.f, 1.f, 1.f }}
-    };
 
     VertexBuffer vertexBuffer(deviceContext.getD3D11Device(), std::span<Vertex>(cube.m_vertices));
     IndexBuffer indexBuffer(deviceContext.getD3D11Device(), std::span<unsigned int>(cube.m_indices));
