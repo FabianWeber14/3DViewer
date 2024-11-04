@@ -9,7 +9,7 @@ D3DDeviceContext::D3DDeviceContext()
         ID3D11DeviceContext* baseDeviceContext;
         D3D_FEATURE_LEVEL featureLevels[] = { D3D_FEATURE_LEVEL_11_0 };
         UINT creationFlags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;
-#ifdef DEBUG
+#ifdef _DEBUG
         creationFlags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
 
@@ -31,7 +31,7 @@ D3DDeviceContext::D3DDeviceContext()
         baseDeviceContext->Release();
     }
 
-#ifdef DEBUG
+#ifdef _DEBUG
     // Set up debug layer to break on D3D11 errors
     ID3D11Debug* d3dDebug = nullptr;
     d3d11Device->QueryInterface(__uuidof(ID3D11Debug), (void**)&d3dDebug);

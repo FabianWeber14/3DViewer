@@ -10,12 +10,12 @@
 #include "VertexShader.h"
 #include "PixelShader.h"
 #include "D3DDeviceContext.h"
+#include "IndexBuffer.h"
+#include "MeshImporter.h"
 #include "SwapChain.h"
 #include "Window.h"
 #include "VertexBuffer.h"
-#include <DirectXMath.h>
-
-
+#include "Vertex.h"
 
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpCmdLine*/, int /*nShowCmd*/)
@@ -31,8 +31,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpC
     // Define Input Layout
     std::array inputElementDesc =
     {
-        D3D11_INPUT_ELEMENT_DESC{ "POS", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        D3D11_INPUT_ELEMENT_DESC{ "COL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+        D3D11_INPUT_ELEMENT_DESC{ "POS", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        D3D11_INPUT_ELEMENT_DESC{ "COL", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        D3D11_INPUT_ELEMENT_DESC{ "NOR", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
     };
 
     // Create Shader
@@ -41,19 +42,30 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpC
 
     // Create Vertex Buffer
 
-    struct Vertex
-    {
-        DirectX::XMFLOAT2 pos;
-        DirectX::XMFLOAT4 col;
-    };
+    auto cube = MeshImporter::getCube();
 
     std::array vertexData = { // x, y, r, g, b, a
-        Vertex {.pos{  0.0f,  0.5f}, .col{ 0.f, 1.f, 0.f, 1.f }},
-        Vertex {.pos{  0.5f, -0.5f}, .col{ 1.f, 0.f, 0.f, 1.f }},
-        Vertex {.pos{ -0.5f, -0.5f}, .col{ 0.f, 0.f, 1.f, 1.f }}
+        Vertex {.pos{  0.0f,  0.5f, 1.f}, .col{ 0.f, 1.f, 0.f, 1.f }},
+        Vertex {.pos{  0.5f, -0.5f,1.f}, .col{ 1.f, 0.f, 0.f, 1.f }},
+        Vertex {.pos{ -0.5f, -0.5f,1.f}, .col{ 0.f, 0.f, 1.f, 1.f }}
     };
 
-    VertexBuffer vertexBuffer(deviceContext.getD3D11Device(), std::span<Vertex>(vertexData));
+    VertexBuffer vertexBuffer(deviceContext.getD3D11Device(), std::span<Vertex>(cube.m_vertices));
+    IndexBuffer indexBuffer(deviceContext.getD3D11Device(), std::span<unsigned int>(cube.m_indices));
+
+	DirectX::XMMATRIX modelTransform = DirectX::XMMatrixScaling(0.5,0.5,0.5)* DirectX::XMMatrixRotationX(0.3);
+    Microsoft::WRL::ComPtr<ID3D11Buffer> pConstantBuffer{ nullptr };
+
+    D3D11_BUFFER_DESC cbd;
+    cbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+    cbd.Usage = D3D11_USAGE_DYNAMIC;
+    cbd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    cbd.MiscFlags = 0u;
+    cbd.ByteWidth = sizeof(modelTransform);
+    cbd.StructureByteStride = 0u;
+    D3D11_SUBRESOURCE_DATA csd = {};
+    csd.pSysMem = &modelTransform;
+    deviceContext.getD3D11Device()->CreateBuffer(&cbd, &csd, &pConstantBuffer);
 
     // Main Loop
     bool isRunning = true;
@@ -91,10 +103,22 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpC
         deviceContext.getD3D11DeviceContext()->VSSetShader(vertexShader.getVertexShader(), nullptr, 0);
         deviceContext.getD3D11DeviceContext()->PSSetShader(pixelShader.getPixelShader(), nullptr, 0);
 
+        modelTransform  *= DirectX::XMMatrixRotationY(0.01);
+        D3D11_MAPPED_SUBRESOURCE data;
+        deviceContext.getD3D11DeviceContext()->Map(pConstantBuffer.Get(), 0u, D3D11_MAP_WRITE_DISCARD, 0u, &data);
+
+        auto newTra = modelTransform * DirectX::XMMatrixTranslation(0.f, 0.f, 0.5f);
+        memcpy(data.pData, &newTra, sizeof(modelTransform));
+        deviceContext.getD3D11DeviceContext()->Unmap(pConstantBuffer.Get(), 0u);
+		deviceContext.getD3D11DeviceContext()->VSSetConstantBuffers(0, 1, pConstantBuffer.GetAddressOf());
+
+
         ID3D11Buffer* vertexBufferData{ vertexBuffer.getVertexBuffer() };
         deviceContext.getD3D11DeviceContext()->IASetVertexBuffers(0, 1, &vertexBufferData, &vertexBuffer.stride, &vertexBuffer.offset);
 
-        deviceContext.getD3D11DeviceContext()->Draw(vertexBuffer.numVerts, 0);
+
+        deviceContext.getD3D11DeviceContext()->IASetIndexBuffer(indexBuffer.get(), indexBuffer.m_dxgiFormat, 0u);
+        deviceContext.getD3D11DeviceContext()->DrawIndexed(indexBuffer.getBufferSize(), 0, 0);
 
         swapChain.present();
     }
