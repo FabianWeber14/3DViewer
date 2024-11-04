@@ -10,12 +10,15 @@
 #include "VertexShader.h"
 #include "PixelShader.h"
 #include "D3DDeviceContext.h"
+#include "IndexBuffer.h"
+#include "MeshImporter.h"
 #include "SwapChain.h"
 #include "Window.h"
 #include "VertexBuffer.h"
 #include <DirectXMath.h>
 
 
+#include "Vertex.h"
 
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpCmdLine*/, int /*nShowCmd*/)
@@ -41,19 +44,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpC
 
     // Create Vertex Buffer
 
-    struct Vertex
-    {
-        DirectX::XMFLOAT2 pos;
-        DirectX::XMFLOAT4 col;
-    };
 
     std::array vertexData = { // x, y, r, g, b, a
         Vertex {.pos{  0.0f,  0.5f}, .col{ 0.f, 1.f, 0.f, 1.f }},
         Vertex {.pos{  0.5f, -0.5f}, .col{ 1.f, 0.f, 0.f, 1.f }},
         Vertex {.pos{ -0.5f, -0.5f}, .col{ 0.f, 0.f, 1.f, 1.f }}
     };
+	std::array<unsigned int, 3> indices = { 0, 1, 2 };
 
     VertexBuffer vertexBuffer(deviceContext.getD3D11Device(), std::span<Vertex>(vertexData));
+    IndexBuffer indexBuffer(deviceContext.getD3D11Device(), std::span<unsigned int>(indices));
 
     // Main Loop
     bool isRunning = true;
@@ -94,7 +94,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR /*lpC
         ID3D11Buffer* vertexBufferData{ vertexBuffer.getVertexBuffer() };
         deviceContext.getD3D11DeviceContext()->IASetVertexBuffers(0, 1, &vertexBufferData, &vertexBuffer.stride, &vertexBuffer.offset);
 
-        deviceContext.getD3D11DeviceContext()->Draw(vertexBuffer.numVerts, 0);
+
+        deviceContext.getD3D11DeviceContext()->IASetIndexBuffer(indexBuffer.get(), indexBuffer.m_dxgiFormat, 0u);
+        deviceContext.getD3D11DeviceContext()->DrawIndexed(indexBuffer.getBufferSize(), 0, 0);
 
         swapChain.present();
     }
